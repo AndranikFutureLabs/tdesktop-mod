@@ -1,0 +1,27 @@
+# Build outputs
+out/
+bin/
+obj/
+
+# IDE and system files
+.vs/
+.vscode/
+*.user
+*.suo
+*.ncb
+*.pdb
+*.obj
+*.ilk
+*.exp
+*.lib
+*.exe
+*.log
+
+# Git
+.git/
+
+# Temporary files
+*.tmp
+*.temp
+Thumbs.db
+Desktop.ini
