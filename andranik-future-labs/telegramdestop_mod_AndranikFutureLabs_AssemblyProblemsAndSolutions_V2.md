@@ -80,5 +80,17 @@ commands = commands.replace('msbuild', f'{msbuild_path} /p:PlatformToolset=v143 
 
 Это позволило MSBuild корректно находить файлы `Microsoft.Cpp.Default.props` и другие компоненты системы сборки, которые в Insiders-версии VS находятся по нестандартным путям.
 
+## 4. Проблемы CI/CD (GitHub Actions)
+
+### Предупреждение о депрекации Node.js 20
+В GitHub Actions при выполнении рабочих процессов стало появляться предупреждение о том, что Node.js 20 скоро перестанет поддерживаться.
+
+**Решение:**
+Принудительное использование Node.js 24 через переменную окружения в файле конфигурации workflow (`.github/workflows/waiting-for-answer.yml`):
+```yaml
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+```
+
 ---
 *Документация подготовлена @AndranikFutureLabs. Версия V2.*

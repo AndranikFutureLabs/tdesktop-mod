@@ -100,6 +100,19 @@ bool HistoryInner::hasSelectRestriction() const {
 	}
 ```
 
+## CI/CD Процессы
+
+### Исправление депрекации Node.js 20 в GitHub Actions
+В рабочем процессе GitHub Actions возникло предупреждение о депрекации Node.js 20. Для решения этой проблемы было настроено принудительное использование Node.js 24.
+
+**Файл:** [`.github/workflows/waiting-for-answer.yml`](.github/workflows/waiting-for-answer.yml)
+
+В конфигурацию workflow добавлена переменная окружения:
+```yaml
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+```
+
 ## Логика обхода ограничений
 
 ### allowsForwarding
