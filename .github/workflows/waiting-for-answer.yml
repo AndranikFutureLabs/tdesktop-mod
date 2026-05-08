@@ -1,5 +1,9 @@
 name: Waiting for answer.
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
+
 on:
   issue_comment:
     types: [created]
@@ -11,8 +15,6 @@ jobs:
     runs-on: ubuntu-slim
     steps:
       - uses: lee-dohm/no-response@v0.5.0
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         with:
           token: ${{ github.token }}
           responseRequiredLabel: waiting for answer
