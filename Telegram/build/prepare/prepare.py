@@ -521,8 +521,6 @@ stage('lzma', """
 win:
     git clone https://github.com/desktop-app/lzma.git
     cd lzma\\C\\Util\\LzmaLib
-    SET "ToolsetProp="
-winarm:
     SET "ToolsetProp=/property:PlatformToolset=v145"
 win:
     msbuild -m LzmaLib.sln /property:Configuration=Debug /property:Platform="$X8664" %ToolsetProp%
@@ -1080,6 +1078,8 @@ win:
     SET PATH=%THIRDPARTY_DIR%\\msys64\\usr\\bin;%PATH%
     SET CHERE_INVOKING=enabled_from_arguments
     SET MSYS2_PATH_TYPE=inherit
+    SET LC_ALL=C.UTF-8
+    SET MSYS2_ARG_CONV_EXCL=*
 
 win32:
     SET "TOOLCHAIN=x86-win32-vs17"
@@ -1410,7 +1410,7 @@ depends:patches/breakpad.diff
 win:
     SET "PYTHONUTF8=1"
     SET "FolderPostfix="
-    SET "ToolsetProp="
+    SET "ToolsetProp=/property:PlatformToolset=v145"
 win64:
     SET "FolderPostfix=_x64"
 winarm:
@@ -1927,7 +1927,14 @@ release:
 """)
 
 if win:
-    currentCodePage = subprocess.run('chcp', capture_output=True, shell=True, text=True, env=modifiedEnv).stdout.strip().split()[-1]
+    currentCodePage = subprocess.run('chcp', capture_output=True, shell=True, env=modifiedEnv).stdout
+    if currentCodePage:
+        try:
+            currentCodePage = currentCodePage.decode('utf-8', errors='ignore').strip().split()[-1]
+        except Exception:
+            currentCodePage = '1251'
+    else:
+        currentCodePage = '1251'
     subprocess.run('chcp 65001 > nul', shell=True, env=modifiedEnv)
     runStages()
     subprocess.run('chcp ' + currentCodePage + ' > nul', shell=True, env=modifiedEnv)
