@@ -27,7 +27,7 @@ jobs:
       - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '24'
 
       - name: Prepare directories.
         run: |
@@ -44,13 +44,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-          path: ${{ env.TBUILD }}/${{ env.REPO_NAME }}
+          path: TBuild/${{ github.event.repository.name }}
 
       - name: First set up.
         shell: bash
         run: |
-          SDK="$(grep "SDK version" $TBUILD/$REPO_NAME/docs/building-win.md | sed -r 's/.*\*\*(.*)\*\* SDK version.*/\1/')"
+          REPO_NAME="${{ github.event.repository.name }}"
+          DOCPATH=$TBUILD/$REPO_NAME/docs/building-win.md
+          SDK="$(grep "SDK version" $DOCPATH | sed -r 's/.*\*\*(.*)\*\* SDK version.*/\1/')"
           echo "SDK=$SDK" >> $GITHUB_ENV
+          echo "REPO_NAME=$REPO_NAME" >> $GITHUB_ENV
           echo "$(sha256sum $TBUILD/$REPO_NAME/$PREPARE_PATH | awk '{ print $1 }')" >> CACHE_KEY.txt
           echo "$SDK" >> CACHE_KEY.txt
           echo "CACHE_KEY=$(sha256sum CACHE_KEY.txt | awk '{ print $1 }')" >> $GITHUB_ENV
@@ -105,7 +108,9 @@ jobs:
 
       - name: Free up some disk space.
         shell: bash
-        run: find $LibrariesPath '(' '(' ! '(' -name '*.lib' -o -name '*.a' -o -name '*.exe' -o -name '*.h' -o -name '*.hpp' -o -name '*.inc' -o -name '*.cmake' -o -path '*/include/*' -o -path '*/objects-*' -o -path '*/cache_keys/*' -o -path '*/patches/*' ')' -type f ')' -o -empty ')' -delete
+        env:
+          LIBS: ${{ env.LibrariesPath }}
+        run: find "$LIBS" '(' '(' ! '(' -name '*.lib' -o -name '*.a' -o -name '*.exe' -o -name '*.h' -o -name '*.hpp' -o -name '*.inc' -o -name '*.cmake' -o -path '*/include/*' -o -path '*/objects-*' -o -path '*/cache_keys/*' -o -path '*/patches/*' ')' -type f ')' -o -empty ')' -delete
 
       - name: Telegram Desktop build.
         if: env.ONLY_CACHE == 'false'
@@ -149,7 +154,7 @@ jobs:
       - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '24'
 
       - name: Get repository name.
         run: echo "REPO_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
@@ -228,7 +233,7 @@ jobs:
       - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '24'
 
       - name: Clone.
         uses: actions/checkout@v4
@@ -306,7 +311,7 @@ jobs:
           -v ${{ runner.temp }}/.tdesktop-cache:/var/cache/ccache \
           -e CONFIG=Debug \
           -e CCACHE_SLOPPINESS=pch_defines,time_macros \
-          $IMAGE_TAG \
+          ${{ env.IMAGE_TAG }} \
           env -u CCACHE_DISABLE /usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
           -D CMAKE_CONFIGURATION_TYPES=Debug \
           -D CMAKE_C_FLAGS_DEBUG="-O0 -fpch-preprocess" \
