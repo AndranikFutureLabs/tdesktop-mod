@@ -419,10 +419,7 @@ bool AddForwardMessageAction(
 	}
 	const auto owner = &item->history()->owner();
 	const auto asGroup = (request.pointState != PointState::GroupPart);
-	if (asGroup) {
-		if (const auto group = owner->groups().find(item)) {
-		}
-	}
+	// Mod: removed allowsForward group check to allow forwarding from restricted channels
 	const auto itemId = item->fullId();
 	menu->addAction(tr::lng_context_forward_msg(tr::now), [=] {
 		if (const auto item = owner->message(itemId)) {
