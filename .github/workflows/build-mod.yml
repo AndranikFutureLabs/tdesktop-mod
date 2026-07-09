@@ -365,10 +365,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Download all artifacts.
+      - name: Download platform artifacts.
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          pattern: Telegram-*
 
       - name: Zip artifacts.
         run: |
