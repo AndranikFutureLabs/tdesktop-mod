@@ -86,6 +86,87 @@ cmake --build out --config Debug --target Telegram
 - [Инструкция по изменениям (MD)](docs/telegramdestop_mod_AndranikFutureLabs_V2.md) — подробное описание всех патчей
 - [Решение проблем при сборке (MD)](docs/telegramdestop_mod_AndranikFutureLabs_AssemblyProblemsAndSolutions_V2.md) — CI/CD проблемы и решения
 
+## 🔄 Подмена exe-файлов из сборки CI
+
+После скачивания архива из [Releases](https://github.com/AndranikFutureLabs/tdesktop-mod/releases) замените оригинальный бинарник Telegram на модифицированный.
+
+### Windows x64
+
+1. Скачайте `Telegram-Windows-x64-Qt6.zip` и распакуйте
+2. Закройте Telegram Desktop если он запущен
+3. Путь установки по умолчанию:
+   ```
+   %LOCALAPPDATA%\Programs\Telegram Desktop\
+   ```
+4. Сделайте резервную копию оригинального `Telegram.exe`:
+   ```cmd
+   copy "%LOCALAPPDATA%\Programs\Telegram Desktop\Telegram.exe" "%LOCALAPPDATA%\Programs\Telegram Desktop\Telegram_original.exe"
+   ```
+5. Скопируйте модифицированный `Telegram.exe` в папку установки с заменой
+6. Удалите `Updater.exe` из папки установки (автообновление отключено)
+7. Запустите Telegram — мод активен
+
+### macOS
+
+1. Скачайте `Telegram-macOS.zip` и распакуйте
+2. Закройте Telegram если он запущен
+3. Путь установки: `/Applications/Telegram.app`
+4. Сделайте резервную копию:
+   ```bash
+   cp -R /Applications/Telegram.app /Applications/Telegram_original.app
+   ```
+5. Замените `Telegram.app`:
+   ```bash
+   cp -R ~/Downloads/Telegram.app /Applications/Telegram.app
+   ```
+6. Снимите quarantine (если macOS блокирует запуск):
+   ```bash
+   xattr -cr /Applications/Telegram.app
+   ```
+7. Если в `/Applications/Telegram.app/Contents/MacOS/` есть `Updater` — удалите его
+8. Запустите Telegram — мод активен
+
+### Linux
+
+1. Скачайте `Telegram-Linux.zip` и распакуйте
+2. Закройте Telegram если он запущен
+3. Путь установки зависит от дистрибутива:
+
+   | Способ установки | Путь |
+   |-----------------|------|
+   | Ручная установка | `~/Telegram/Telegram` или `~/Downloads/Telegram/Telegram` |
+   | Flatpak | `/var/lib/flatpak/app/org.telegram.desktop/` |
+   | Snap | `/snap/telegram-desktop/current/` |
+   | .AppImage | путь к `.AppImage` файлу |
+
+4. Сделайте резервную копию:
+   ```bash
+   cp ~/Telegram/Telegram ~/Telegram/Telegram_original
+   ```
+5. Скопируйте модифицированный бинарник:
+   ```bash
+   cp ~/Downloads/Telegram ~/Telegram/Telegram
+   chmod +x ~/Telegram/Telegram
+   ```
+6. Если в папке установки есть `Updater` — удалите его
+7. Запустите Telegram — мод активен
+
+### ✅ Проверка работы мода
+
+1. Откройте любой защищённый канал (с иконкой 🔒 или где запрещено пересылать)
+2. Правый клик на сообщение → должна быть кнопка **"Переслать"**
+3. Правый клик на фото/видео → должна быть кнопка **"Сохранить"**
+4. Текст можно выделить и скопировать
+5. Тост "Копирование запрещено" не появляется
+
+### ↩️ Возврат к оригиналу
+
+| OS | Действие |
+|----|----------|
+| Windows | Переименовать `Telegram_original.exe` → `Telegram.exe` |
+| macOS | Удалить мод, переименовать `Telegram_original.app` → `Telegram.app` |
+| Linux | Скопировать `Telegram_original` → `Telegram` |
+
 ---
 
 <div align="center">
