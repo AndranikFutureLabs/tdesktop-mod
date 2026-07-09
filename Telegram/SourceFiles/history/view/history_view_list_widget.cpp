@@ -5452,29 +5452,15 @@ void ConfirmSendNowSelectedItems(not_null<ListWidget*> widget) {
 CopyRestrictionType CopyRestrictionTypeFor(
 		not_null<PeerData*> peer,
 		HistoryItem *item) {
-	return (peer->allowsForwarding() && (!item || !item->forbidsForward()))
-		? CopyRestrictionType::None
-		: peer->isUser()
-		? CopyRestrictionType::User
-		: peer->isBroadcast()
-		? CopyRestrictionType::Channel
-		: CopyRestrictionType::Group;
+	// Mod: no copy restriction for restricted channels
+	return CopyRestrictionType::None;
 }
 
 CopyRestrictionType CopyMediaRestrictionTypeFor(
 		not_null<PeerData*> peer,
 		not_null<HistoryItem*> item) {
-	if (const auto all = CopyRestrictionTypeFor(peer, item)
-		; all != CopyRestrictionType::None) {
-		return all;
-	}
-	return !item->forbidsSaving()
-		? CopyRestrictionType::None
-		: peer->isUser()
-		? CopyRestrictionType::User
-		: peer->isBroadcast()
-		? CopyRestrictionType::Channel
-		: CopyRestrictionType::Group;
+	// Mod: no copy media restriction for restricted channels
+	return CopyRestrictionType::None;
 }
 
 CopyRestrictionType SelectRestrictionTypeFor(

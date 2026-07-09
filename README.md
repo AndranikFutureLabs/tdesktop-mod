@@ -7,9 +7,10 @@
 ## Возможности
 
 1. **Сохранение видео и изображений из защищённых каналов** — обход ограничения `noforwards` и `forbidsSaving`
-2. **Пересылка сообщений из защищённых каналов** — кнопка "Переслать" доступна всегда
+2. **Пересылка сообщений из защищённых каналов** — кнопка "Переслать" доступна всегда, для одного и нескольких сообщений
 3. **Копирование и выделение текста** — `hasSelectRestriction`, `hasCopyRestriction`, `hasCopyMediaRestriction` всегда возвращают `false`
 4. **Сохранение документов** — принудительное включение "Сохранить как" для всех медиафайлов
+5. **Автообновление отключено** — мод не будет затёрт официальным обновлением Telegram
 
 ## Изменённые файлы
 
@@ -17,10 +18,11 @@
 
 | # | Файл | Что патчено |
 |---|------|-------------|
-| 1 | `history/view/history_view_context_menu.cpp` | Обход `allowsForward` для пересылки单个 и выбранных сообщений |
-| 2 | `history/history_inner_widget.cpp` | `hasSelectRestriction()`, `hasCopyRestriction()`, `hasCopyMediaRestriction()`, `hasCopyRestrictionForSelected()` → `return false` |
-| 3 | `history/view/history_view_list_widget.cpp` | Те же функции в `ListWidget` + `showCopyRestriction()`, `showCopyMediaRestriction()`, `hasSelectRestriction()` → `return false` |
-| 4 | `history/view/media/history_view_save_document_action.cpp` | Принудительное включение "Сохранить как" (без изменений — работает через обход `hasCopyMediaRestriction`) |
+| 1 | `history/history_item.cpp` | `allowsForward()` — убраны проверки `forbidsForward()` и `peer->allowsForwarding()` |
+| 2 | `history/view/history_view_context_menu.cpp` | Обход `allowsForward` для пересылки单个 и выбранных сообщений |
+| 3 | `history/history_inner_widget.cpp` | `hasSelectRestriction()`, `hasCopyRestriction()`, `hasCopyMediaRestriction()`, `hasCopyRestrictionForSelected()` → `return false` |
+| 4 | `history/view/history_view_list_widget.cpp` | Те же функции в `ListWidget` + `showCopyRestriction()` → `return false` + `CopyRestrictionTypeFor()` и `CopyMediaRestrictionTypeFor()` → `return None` |
+| 5 | `history/view/media/history_view_save_document_action.cpp` | Без изменений — работает через обход `hasCopyMediaRestriction` |
 
 Все патчи помечены комментариями `// Mod:` для удобства поиска.
 
@@ -44,7 +46,7 @@ cmake --build out --config Debug --target Telegram
 
 ## CI/CD
 
-- **Build Mod** — сборка на Windows, macOS, Linux (Qt6, Node.js 24)
+- **Build Mod** — сборка на Windows, macOS, Linux (Qt6, Node.js 24), автообновление отключено
 - **Release** — автоматическая публикация GitHub Release с артефактами при пуше тега `v*`
 - **Waiting for answer** — автоуправление issues с меткой "waiting for answer"
 
@@ -55,4 +57,4 @@ cmake --build out --config Debug --target Telegram
 Готовые сборки доступны в [GitHub Releases](https://github.com/AndranikFutureLabs/tdesktop-mod/releases).
 
 ---
-*Модификация подготовлена @AndranikFutureLabs. Версия V3.0.0.*
+*Модификация подготовлена @AndranikFutureLabs. Версия V3.1.0.*
