@@ -1,6 +1,6 @@
 # Telegram Desktop Mod — Andranik Future Labs
 
-![Andranik Future Labs](mod.png)
+![Andranik Future Labs](mod.jpg)
 
 <div align="center">
 
