@@ -5,26 +5,27 @@
 Данная модификация Telegram Desktop (@AndranikFutureLabs) направлена на снятие ограничений, накладываемых владельцами каналов и групп на контент. Основная цель — обеспечить пользователю полный контроль над данными, включая возможность сохранения медиафайлов и пересылки сообщений из защищенных чатов.
 
 ## Возможности
-1. **Сохранение видео и изображений из защищённых каналов** — обход ограничения `noforwards`
+
+1. **Сохранение видео и изображений из защищённых каналов** — обход ограничения `noforwards` и `forbidsSaving`
 2. **Пересылка сообщений из защищённых каналов** — кнопка "Переслать" доступна всегда
-3. **Сохранение документов** — обход проверки TTL и `hasCopyMediaRestriction`
-4. **Копирование и выделение текста** — `hasSelectRestriction` всегда возвращает `false`
+3. **Копирование и выделение текста** — `hasSelectRestriction`, `hasCopyRestriction`, `hasCopyMediaRestriction` всегда возвращают `false`
+4. **Сохранение документов** — принудительное включение "Сохранить как" для всех медиафайлов
 
-## Документация V2
-- [Инструкция по сборке и изменениям (MD)](docs/telegramdestop_mod_AndranikFutureLabs_V2.md)
-- [Решение проблем при сборке (MD)](docs/telegramdestop_mod_AndranikFutureLabs_AssemblyProblemsAndSolutions_V2.md)
-- [Инструкция по сборке и изменениям (PDF)](docs/telegramdestop_mod_AndranikFutureLabs_V2.pdf)
-- [Решение проблем при сборке (PDF)](docs/telegramdestop_mod_AndranikFutureLabs_AssemblyProblemsAndSolutions_V2.pdf)
+## Изменённые файлы
 
-## Измененные файлы
 Исходный код изменений доступен в папке `src_changes/`.
 
-### Список изменённых файлов:
-1. `Telegram/SourceFiles/history/view/history_view_context_menu.cpp` — обход ограничений на пересылку
-2. `Telegram/SourceFiles/history/history_inner_widget.cpp` — снятие ограничений на копирование и выделение
-3. `Telegram/SourceFiles/history/view/media/history_view_save_document_action.cpp` — принудительное включение "Сохранить как"
+| # | Файл | Что патчено |
+|---|------|-------------|
+| 1 | `history/view/history_view_context_menu.cpp` | Обход `allowsForward` для пересылки单个 и выбранных сообщений |
+| 2 | `history/history_inner_widget.cpp` | `hasSelectRestriction()`, `hasCopyRestriction()`, `hasCopyMediaRestriction()`, `hasCopyRestrictionForSelected()` → `return false` |
+| 3 | `history/view/history_view_list_widget.cpp` | Те же функции в `ListWidget` + `showCopyRestriction()`, `showCopyMediaRestriction()`, `hasSelectRestriction()` → `return false` |
+| 4 | `history/view/media/history_view_save_document_action.cpp` | Принудительное включение "Сохранить как" (без изменений — работает через обход `hasCopyMediaRestriction`) |
+
+Все патчи помечены комментариями `// Mod:` для удобства поиска.
 
 ## Сборка
+
 Базируется на последней версии `dev` ветки [telegramdesktop/tdesktop](https://github.com/telegramdesktop/tdesktop).
 
 Требования: Visual Studio 2022+, Qt 6, CMake 3.25+, Python 3.11+, Node.js 24+.
@@ -42,7 +43,16 @@ cmake --build out --config Debug --target Telegram
 ```
 
 ## CI/CD
-GitHub Actions настроен на использование Node.js 24 (последняя LTS).
+
+- **Build Mod** — сборка на Windows, macOS, Linux (Qt6, Node.js 24)
+- **Release** — автоматическая публикация GitHub Release с артефактами при пуше тега `v*`
+- **Waiting for answer** — автоуправление issues с меткой "waiting for answer"
+
+Сборка запускается автоматически при пуше в `main` или при создании тега `v*`.
+
+## Скачать
+
+Готовые сборки доступны в [GitHub Releases](https://github.com/AndranikFutureLabs/tdesktop-mod/releases).
 
 ---
-*Модификация подготовлена @AndranikFutureLabs. Версия V3.*
+*Модификация подготовлена @AndranikFutureLabs. Версия V3.0.0.*
