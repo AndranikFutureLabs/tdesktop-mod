@@ -1,89 +1,131 @@
-# Telegram Desktop: Проблемы сборки и решения (V2)
+# Telegram Desktop Mod: Проблемы сборки и решения (V3.1.0)
 ## Проект: @AndranikFutureLabs
 
-В данном документе описаны технические сложности, возникшие при сборке Telegram Desktop в специфическом окружении (Windows Server 2025, Visual Studio 2026 Insiders), и методы их решения.
+Документ описывает технические сложности при сборке модифицированного Telegram Desktop и методы их решения.
 
-## 1. Использованные команды
+## 1. CI/CD (GitHub Actions)
 
-### Подготовка окружения (Native Tools Command Prompt x64):
+### Сборка на 3 платформах
+Мод собирается через GitHub Actions на Windows, macOS и Linux с использованием Qt6 и Node.js 24.
+
+**Файл:** `.github/workflows/build-mod.yml`
+
+Ключевые параметры сборки:
+```yaml
+- TDESKTOP_API_TEST=ON
+- DESKTOP_APP_DISABLE_AUTOUPDATE=ON   # мод не затирается официальным обновлением
+- DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF
+```
+
+### Автопубликация релизов
+При пуше тега `v*` автоматически запускается job `release`, который:
+1. Скачивает артефакты всех 3 платформ (по pattern `Telegram-*`, минуя Docker cache)
+2. Запаковывает каждый в ZIP
+3. Создаёт GitHub Release с автогенерированными notes
+
+```yaml
+release:
+  needs: [windows, macos, linux]
+  if: startsWith(github.ref, 'refs/tags/v')
+  steps:
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: Telegram-*
+    - uses: softprops/action-gh-release@v2
+```
+
+### Waiting for answer
+Workflow для автоуправления issues с меткой "waiting for answer". Требует `permissions: issues: write` для создания лейблов через GITHUB_TOKEN.
+
+## 2. Решённые проблемы CI
+
+### Проблема: "Resource not accessible by integration"
+**Причина:** `waiting-for-answer` workflow не имел прав на создание лейблов.
+**Решение:** Добавить `permissions: issues: write` в job.
+
+### Проблема: "Artifact download failed after 5 retries"
+**Причина:** Job `release` пытался скачать ALL артефакты, включая Docker build cache (`AndranikFutureLabs~tdesktop-mod~*.dockerbuild`), который не скачивается.
+**Решение:** Использовать `pattern: Telegram-*` в `download-artifact`.
+
+### Проблема: "Move artifact" failed — Updater not found
+**Причина:** При `DESKTOP_APP_DISABLE_AUTOUPDATE=ON` бинарник `Updater` не собирается, но шаг "Move artifact" пытался его переместить.
+**Решение:** Убрать `Updater` из всех шагов Move artifact (Windows, macOS, Linux).
+
+### Проблема: macOS `-Wunused-but-set-variable`
+**Причина:** После удаления проверки `allowsForward` в context_menu, переменная `group` осталась неиспользованной в пустом `if(group){}` блоке.
+**Решение:** Удалить весь блок `if(asGroup) { if(const auto group=...) {} }`.
+
+## 3. Локальная сборка (Windows)
+
+### Требования
+- Visual Studio 2022+, Qt 6, CMake 3.25+, Python 3.11+, Node.js 24+
+- Windows SDK 10.0.26100.0+
+
+### Команды
 ```cmd
 :: Установка переменных окружения Visual Studio
-call "C:\Program Files\Microsoft Visual Studio\18\Insiders\VC\Auxiliary\Build\vcvars64.bat"
+call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
 
-:: Клонирование репозитория (если не сделано)
-git clone --recursive https://github.com/telegramdesktop/tdesktop.git
-cd tdesktop
-```
-
-### Сборка зависимостей:
-```cmd
-:: Запуск скрипта подготовки с указанием версии Qt
+:: Запуск скрипта подготовки
 python Telegram/build/prepare/prepare.py qt6
-```
 
-### Генерация проекта и сборка:
-```cmd
-:: Генерация файлов проекта через CMake
-cmake -B out -G "Visual Studio 18 2026" -A x64 -DCMAKE_BUILD_TYPE=Debug
+:: Генерация и сборка
+cmake -B out -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Debug ^
+  -D TDESKTOP_API_TEST=ON ^
+  -D DESKTOP_APP_DISABLE_AUTOUPDATE=ON
 
-:: Сборка цели Telegram
 cmake --build out --config Debug --target Telegram
 ```
 
-## 2. Модификация модуля `prepare.py`
+### Модификация prepare.py (для VS 2026 Insiders)
 
-Для успешной сборки на Windows Server 2025 с использованием Visual Studio 2026 (v18) были внесены критические правки в скрипт [`Telegram/build/prepare/prepare.py`](Telegram/build/prepare/prepare.py).
+При сборке на Visual Studio 2026 (v18) Insiders потребовались правки `prepare.py`:
 
-### Исправление кодировки (UTF-8)
-Для предотвращения ошибок `UnicodeDecodeError` при чтении вывода системных команд:
+**Исправление кодировки (UTF-8):**
 ```python
-# Строка ~1934
 currentCodePage = subprocess.run('chcp', capture_output=True, shell=True, text=True, env=modifiedEnv).stdout.strip().split()[-1]
 subprocess.run('chcp 65001 > nul', shell=True, env=modifiedEnv)
 runStages()
 subprocess.run('chcp ' + currentCodePage + ' > nul', shell=True, env=modifiedEnv)
 ```
 
-### Автозамена Toolset (v143) и версии VS
-Скрипт был дополнен логикой автоматической подмены устаревших версий тулсета на актуальный для VS 2026:
+**Автозамена Toolset:**
 ```python
-# Строка ~433
 commands = commands.replace('v140', 'v143').replace('v141', 'v143').replace('v142', 'v143')
 commands = commands.replace('Visual Studio 17 2022', 'Visual Studio 18 2026')
 ```
 
-### Патчинг Breakpad
-Модуль `breakpad` требовал особого внимания из-за жестко прописанных путей и версий в `.vcxproj` файлах:
+**Патчинг Breakpad:**
 ```python
-# Строка ~438
 if stage['name'] == 'breakpad':
     patch_cmd = 'python -c "import glob; [open(f, \'wb\').write(open(f, \'rb\').read().replace(b\'v140\', b\'v143\').replace(b\'v141\', b\'v143\').replace(b\'v142\', b\'v143\')) for f in glob.glob(\'**/*.vcxproj\', recursive=True)]"'
-    # ... замена команд msbuild с внедрением patch_cmd
 ```
 
-## 3. Решение ошибок MSBuild
+## 4. Известные ограничения
 
-### Ошибки MSB1011, MSB4025, MSB4102
-Эти ошибки возникали из-за неправильного определения путей к таргетам и версии SDK в новой версии Visual Studio.
+- **Локальная сборка** может быть заблокирована нестабильной сетью (libvpx clone hang) — используйте CI
+- **Автообновление отключено** — пользователи не получат обновления, нужно обновлять вручную через Releases
+- **Updater не входит в архив** — только `Telegram` (или `Telegram.exe` / `Telegram.app`)
 
-**Решение:**
-В скрипте `prepare.py` была реализована принудительная передача параметров `VCTargetsPath` и `PlatformToolset` во все вызовы MSBuild:
+## 5. Структура репозитория
 
-```python
-# Строка ~430
-msbuild_path = '"C:\\Program Files\\Microsoft Visual Studio\\18\\Insiders\\MSBuild\\Current\\Bin\\amd64\\MSBuild.exe"'
-vc_targets = "C:\\Program Files\\Microsoft Visual Studio\\18\\Insiders\\MSBuild\\Microsoft\\VC\\v170"
-
-# Строка ~450
-commands = commands.replace('msbuild', f'{msbuild_path} /p:PlatformToolset=v143 /p:WindowsTargetPlatformVersion=10.0 /p:VCTargetsPath="{vc_targets}"')
 ```
-
-Это позволило MSBuild корректно находить файлы `Microsoft.Cpp.Default.props` и другие компоненты системы сборки, которые в Insiders-версии VS находятся по нестандартным путям.
-
-## 4. Проблемы CI/CD (GitHub Actions)
-
-### Предупреждение о депрекации Node.js 20
-Не обходимо переписать код на основе последнего node.js 24
+tdesktop-mod/
+├── Telegram/              # исходный код (с патчами)
+├── docs/                  # документация
+│   ├── telegramdestop_mod_AndranikFutureLabs_V2.md          # инструкция по изменениям
+│   └── telegramdestop_mod_AndranikFutureLabs_AssemblyProblemsAndSolutions_V2.md  # проблемы и решения
+├── src_changes/           # копии изменённых файлов
+│   ├── history_item.cpp
+│   ├── history_inner_widget.cpp
+│   ├── history_view_context_menu.cpp
+│   ├── history_view_list_widget.cpp
+│   └── history_view_save_document_action.cpp
+├── .github/workflows/
+│   ├── build-mod.yml      # сборка + релиз
+│   └── waiting-for-answer.yml
+└── README.md
+```
 
 ---
-*Документация подготовлена @AndranikFutureLabs. Версия V2.*
+*Документация подготовлена @AndranikFutureLabs. Версия V3.1.0.*

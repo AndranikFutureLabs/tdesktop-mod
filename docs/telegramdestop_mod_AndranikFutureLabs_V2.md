@@ -1,141 +1,125 @@
-# Telegram Desktop Mod: Andranik Future Labs (V3)
+# Telegram Desktop Mod — Andranik Future Labs (V3.1.0)
 
 ## Описание проекта
-Данная модификация Telegram Desktop (@AndranikFutureLabs) направлена на снятие ограничений, накладываемых владельцами каналов и групп на контент. Основная цель — обеспечить пользователю полный контроль над данными, включая возможность сохранения медиафайлов и пересылки сообщений из защищенных чатов.
 
-## Базовая версия
-Мод построен на последней версии `dev` ветки [telegramdesktop/tdesktop](https://github.com/telegramdesktop/tdesktop).
+Модификация Telegram Desktop (@AndranikFutureLabs) для снятия ограничений, накладываемых владельцами каналов и групп на контент. Цель — полный контроль пользователя над данными: сохранение медиафайлов, пересылка и копирование сообщений из защищённых чатов.
+
+- **Репозиторий:** [github.com/AndranikFutureLabs/tdesktop-mod](https://github.com/AndranikFutureLabs/tdesktop-mod)
+- **Базовая версия:** последняя `dev` ветка [telegramdesktop/tdesktop](https://github.com/telegramdesktop/tdesktop)
+- **Релизы:** [GitHub Releases](https://github.com/AndranikFutureLabs/tdesktop-mod/releases)
+
+## Возможности
+
+1. **Пересылка сообщений** из защищённых каналов — для одного и нескольких сообщений
+2. **Сохранение медиа** (видео, изображения, документы) из защищённых каналов
+3. **Копирование и выделение текста** из защищённых каналов
+4. **Автообновление отключено** — мод не затирается официальным обновлением Telegram
 
 ## Изменения в исходном коде
 
-### 1. Обход ограничений контекстного меню (пересылка сообщений)
+Все патчи помечены комментариями `// Mod:`. Копии изменённых файлов — в папке `src_changes/`.
+
+### 1. HistoryItem::allowsForward() — разрешить пересылку
+**Файл:** `Telegram/SourceFiles/history/history_item.cpp`
+
+Корневая проверка пересылки. В оригинале проверяет `forbidsForward()` и `peer->allowsForwarding()`.
+
+Было:
+```cpp
+bool HistoryItem::allowsForward() const {
+    return !isService()
+        && isRegular()
+        && !forbidsForward()
+        && history()->peer->allowsForwarding()
+        && (!_media || _media->allowsForward());
+}
+```
+
+Стало:
+```cpp
+bool HistoryItem::allowsForward() const {
+    // Mod: always allow forwarding from restricted channels
+    return !isService()
+        && isRegular()
+        && (!_media || _media->allowsForward());
+}
+```
+
+### 2. Контекстное меню — обход проверок пересылки
 **Файл:** `Telegram/SourceFiles/history/view/history_view_context_menu.cpp`
 
-**Фрагмент 1 (Пересылка выделенных сообщений):**
-Было:
+**Пересылка выделенных сообщений** — проверка заменена на `if (false)`:
 ```cpp
-	if (!ranges::all_of(request.selectedItems, &SelectedItem::canForward)) {
-		return false;
-	}
-```
-Стало:
-```cpp
-	if (false) {
-		return false;
-	}
+// Было:
+if (!ranges::all_of(request.selectedItems, &SelectedItem::canForward)) {
+    return false;
+}
+// Стало:
+if (false) {
+    return false;
+}
 ```
 
-**Фрагмент 2 (Пересылка одного сообщения):**
-Было:
+**Пересылка одного сообщения** — убрана проверка `allowsForward` для группы:
 ```cpp
-	} else if (!item || !item->allowsForward()) {
-		return false;
-	}
-```
-Стало:
-```cpp
-	} else if (!item) {
-		return false;
-	}
+// Было: проверка group->items через allowsForward
+// Стало: // Mod: removed allowsForward group check
 ```
 
-**Фрагмент 3 (Пересылка группы сообщений):**
-Было:
-```cpp
-		if (const auto group = owner->groups().find(item)) {
-			if (!ranges::all_of(group->items, &HistoryItem::allowsForward)) {
-				return false;
-			}
-		}
-```
-Стало:
-```cpp
-		if (const auto group = owner->groups().find(item)) {
-		}
-```
+### 3. ListWidget — снятие всех ограничений
+**Файл:** `Telegram/SourceFiles/history/view/history_view_list_widget.cpp`
 
-### 2. Снятие ограничений на копирование и выделение
+Все restriction-функции возвращают `false`:
+
+| Функция | Было | Стало |
+|---------|------|-------|
+| `hasCopyRestriction()` | проверка через delegate | `return false` |
+| `hasCopyMediaRestriction()` | проверка через delegate | `return false` |
+| `hasCopyRestrictionForSelected()` | проверка `forbidsForward` для выбранных | `return false` |
+| `hasSelectRestriction()` | проверка `session().frozen()` + delegate | `return false` |
+| `showCopyRestriction()` | показ тоста "нельзя копировать" | `return false` |
+| `showCopyMediaRestriction()` | показ тоста | `return false` |
+| `CopyRestrictionTypeFor()` | проверка `allowsForwarding` + `forbidsForward` | `return CopyRestrictionType::None` |
+| `CopyMediaRestrictionTypeFor()` | проверка `forbidsSaving` | `return CopyRestrictionType::None` |
+
+### 4. HistoryInner — снятие ограничений (дублирующий класс)
 **Файл:** `Telegram/SourceFiles/history/history_inner_widget.cpp`
 
-Было:
-```cpp
-bool HistoryInner::hasSelectRestriction() const {
-	if (session().frozen()) {
-		return true;
-	} else if (!_sharingDisallowed.current()) {
-		return false;
-	} else if (const auto chat = _peer->asChat()) {
-		return !chat->canDeleteMessages();
-	} else if (const auto channel = _peer->asChannel()) {
-		return !channel->canDeleteMessages();
-	}
-	return true;
-}
-```
-Стало:
-```cpp
-bool HistoryInner::hasSelectRestriction() const {
-	return false;
-}
-```
+| Функция | Стало |
+|---------|-------|
+| `hasSelectRestriction()` | `return false` |
+| `hasCopyRestriction()` | `return false` |
+| `hasCopyMediaRestriction()` | `return false` |
+| `hasCopyRestrictionForSelected()` | `return false` |
 
-### 3. Принудительное включение "Сохранить как" для документов
+### 5. Сохранение документов
 **Файл:** `Telegram/SourceFiles/history/view/media/history_view_save_document_action.cpp`
 
-Было:
-```cpp
-	if (!item || list->hasCopyMediaRestriction(item) || ItemHasTtl(item)) {
-		return;
-	}
-```
-Стало:
-```cpp
-	if (!item) {
-		return;
-	}
-```
+Без изменений — работает через обход `hasCopyMediaRestriction()` в `ListWidget` и `HistoryInner`.
 
-**Примечание:** В новой версии tdesktop также добавлена проверка `list->hasCopyMediaRestriction(item)`, которая также удалена — это позволяет сохранять документы (включая видео и изображения) из защищённых каналов.
+## Логика обхода
 
-## Логика обхода ограничений
+### allowsForward()
+Метод `HistoryItem::allowsForward()` — корневая проверка на уровне данных. Возвращает `true` для всех регулярных сообщений, игнорируя флаги `noforwards` и `forbidsForward()`. Это автоматически включает:
+- Кнопку "Переслать" в контекстном меню
+- `canForwardCount` > 0 в выбранных сообщениях → кнопку "Переслать выбранное"
+- Drag-and-drop пересылку
 
-### allowsForwarding
-В Telegram API `allowsForward` проверяет флаг `noforwards` у чата. Модификация игнорирует этот флаг в функциях построения контекстного меню, позволяя вызывать диалог пересылки (`Window::ShowForwardMessagesBox`) для любого сообщения.
+### Copy/Select Restrictions
+Функции `hasCopyRestriction()`, `hasCopyMediaRestriction()`, `hasSelectRestriction()` в обоих классах (`ListWidget` и `HistoryInner`) возвращают `false`. UI считает, что чат не имеет ограничений → доступны выделение, копирование, сохранение медиа.
 
-### hasCopyMediaRestriction
-Ограничение на копирование медиа и текста завязано на метод `hasSelectRestriction`. Возвращая всегда `false`, мод обманывает UI-логику, заставляя её считать, что чат не имеет ограничений. Это автоматически включает выделение текста, копирование ссылок и стандартные действия сохранения.
-
-### ItemHasTtl + hasCopyMediaRestriction
-Удаление этих проверок в `AddSaveDocumentAction` позволяет сохранять документы из сообщений с TTL и из чатов с ограничением на копирование медиа.
+### Тосты "Копирование запрещено"
+`showCopyRestriction()` и `showCopyMediaRestriction()` возвращают `false` — тост не показывается.
 
 ## CI/CD
 
-### Node.js 24
-GitHub Actions настроен на использование Node.js 24 — последней LTS версии.
+- **Build Mod** — сборка на Windows, macOS, Linux (Qt6, Node.js 24), `DESKTOP_APP_DISABLE_AUTOUPDATE=ON`
+- **Release** — автопубликация GitHub Release с артефактами при пуше тега `v*`
+- **Waiting for answer** — автоуправление issues (`permissions: issues: write`)
 
-**Файл:** `.github/workflows/waiting-for-answer.yml`
+## Скачать
 
-```yaml
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
-```
-
-Также добавлен шаг `actions/setup-node@v4` с `node-version: 24`.
-
-## Сборка
-
-```cmd
-:: Установка переменных окружения Visual Studio
-call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-
-:: Запуск скрипта подготовки
-python Telegram/build/prepare/prepare.py qt6
-
-:: Генерация и сборка
-cmake -B out -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Debug
-cmake --build out --config Debug --target Telegram
-```
+Готовые сборки: [GitHub Releases](https://github.com/AndranikFutureLabs/tdesktop-mod/releases)
 
 ---
-*Документация подготовлена @AndranikFutureLabs. Версия V3.*
+*Документация подготовлена @AndranikFutureLabs. Версия V3.1.0.*
