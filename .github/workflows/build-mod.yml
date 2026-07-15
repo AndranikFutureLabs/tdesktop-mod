@@ -137,7 +137,7 @@ jobs:
 
       - name: Upload artifact.
         if: env.UPLOAD_ARTIFACT == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Telegram-Windows-x64-Qt6
           path: artifact\
@@ -214,7 +214,7 @@ jobs:
 
       - name: Upload artifact.
         if: env.UPLOAD_ARTIFACT == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Telegram-macOS
           path: ${{ env.REPO_NAME }}/out/Debug/artifact/
@@ -350,7 +350,7 @@ jobs:
 
       - name: Upload artifact.
         if: env.UPLOAD_ARTIFACT == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Telegram-Linux
           path: out/Debug/artifact/
